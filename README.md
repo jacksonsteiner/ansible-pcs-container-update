@@ -1,1 +1,1 @@
-# ansible-pacemaker-container-updater
+# pacemaker-uniform-update
