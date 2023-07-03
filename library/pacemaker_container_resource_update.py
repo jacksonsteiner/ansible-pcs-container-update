@@ -71,24 +71,42 @@ import json
 
 def ensure_pcs_present(module):
     rc, out, err = module.run_command('pcs resource status ' + module.params['name'])
-
     if rc != 0:
         module.fail_json(msg=out, **result)
     else:
-        return output
+        return out
 
-def get_image_digest(module):
-    if module.params['name'].lower() not in ['docker', 'podman'] or module.params['name'] != '':
-        module.fail_json(msg="Invalid container engine.", **result)
 
-    if module.params['name'].lower == 'docker':
-        rc, out, err = module.run_command("docker images --digests")
+def get_pulled_image_digest(module):
+    if module.params['engine'] != None and module.params['engine'].lower() not in ['docker', 'podman']:
+        module.fail_json(msg='Invalid container engine.', **result)
+    rc, imageInfo, err = module.run_command('podman images ' + module.params['name'] + ' --format json')
+    if rc != 0:
+        module.fail_json(msg=imageInfo, **result)
+    imageInfoJSON = json.loads(imageInfo)
+    digest = imageInfoJSON[0]['Digest'].split(':')[1]
+    return digest
+
+
+def get_running_image_digest(module):
+    rc, imageInfo, err = module.run_command('podman container inspect ' + module.params['name'])
+    if rc != 0:
+        module.fail_json(msg=imageInfo, **result)
+    imageInfoJSON = json.loads(imageInfo)
+    digest = imageInfoJSON[0]['ImageDigest'].split(':')[1]
+    return digest
+
+
+def action_resource(module, pulledImageResource, runningImageResource):
+    if pulledImageResource != runningImageResource:
+        rc, out, err = module.run_command('podman container restart ' + module.params['name'])
+        if rc != 0:
+            module.fail_json(msg=out, **result)
+        else:
+            return True
     else:
-        rc, image, err = module.run_command("pcs resource config " + module.params['name'] | grep 'image=' | cut -d '=' -f 2)
-        rc, imageInfo, err = module.run_command("podman images " + image + " --format json")
-        imageInfoJSON = json.loads(imageInfo)
-        digest = imageInfoJSON[0]['Digest'].split(':')[1]
-        
+        return False
+
 
 def run_module():
     # define available arguments/parameters a user can pass to the module
@@ -104,8 +122,6 @@ def run_module():
     # for consumption, for example, in a subsequent task
     result = dict(
         changed=False,
-    #    original_message='',
-    #    message=''
     )
 
     # the AnsibleModule object will be our abstraction working with Ansible
@@ -123,26 +139,21 @@ def run_module():
     if module.check_mode:
         module.exit_json(**result)
 
-    resource_status = ensure_pcs_present(module)
-    if platform.node() not in resource_status:
-        response = {"result": "skipping"}
+    resourceStatus = ensure_pcs_present(module)
+    if platform.node() not in resourceStatus:
+        response = {'result': 'skipping'}
         module.exit_json(changed=False, meta=response)
-    image_digest = get_image_digest(module)
-
-    # use whatever logic you need to determine whether or not this module
-    # made any modifications to your target
-    if module.params['new']:
-        result['changed'] = True
-
-    # during the execution of the module, if there is an exception or a
-    # conditional state that effectively causes a failure, run
-    # AnsibleModule.fail_json() to pass in the message and the result
-    if module.params['name'] == 'fail me':
-        module.fail_json(msg='You requested this to fail', **result)
-
-    # in the event of a successful module execution, you will want to
-    # simple AnsibleModule.exit_json(), passing the key/value results
-    module.exit_json(**result)
+    pulledImageDigest = get_pulled_image_digest(module)
+    if pulledImageDigest == '':
+        response = {'result': 'skipping'}
+        module.exit_json(changed=False, meta=response)
+    runningImageDigest = get_running_image_digest(module)
+    result['changed'] = action_resource(module, pulledImageDigest, runningImageDigest)
+    if result['changed']:
+        response = {'result': 'success'}
+    else:
+        response = {'result': 'ok'}
+    module.exit_json(**result, meta=response)
 
 
 def main():
