@@ -1,1 +1,1 @@
-# pacemaker-uniform-update
+# pacemaker-container-resource-update
