@@ -7,34 +7,30 @@ __metaclass__ = type
 
 DOCUMENTATION = r'''
 ---
-module: my_test
+module: pacemaker_contaniner_resource_update
 
-short_description: This is my test module
+short_description: Uniform update for pacemaker container resources
 
-# If this is part of a collection, you need to use semantic versioning,
-# i.e. the version is of the form "2.5.0" and not "2.4".
-version_added: "1.0.0"
+version_added: "0.0.1"
 
-description: This is my longer description explaining my test module.
+description: Longer description of pacemaker_container_resource_update
 
 options:
     name:
-        description: This is the message to send to the test module.
+        description: Name of the pacemaker container resource.
         required: true
         type: str
-    new:
-        description:
-            - Control to demo if the result of this module is changed or not.
-            - Parameter description can be a list as well.
+    engine:
+        description: Container engine running containers. Can be Docker or Podman. Defaults to Podman.
         required: false
-        type: bool
+        type: str
 # Specify this value according to your collection
 # in format of namespace.collection.doc_fragment_name
 extends_documentation_fragment:
     - my_namespace.my_collection.my_doc_fragment_name
 
 author:
-    - Your Name (@yourGitHubHandle)
+    - Jackson Steiner (@jacksonsteiner)
 '''
 
 EXAMPLES = r'''
@@ -70,13 +66,35 @@ message:
 '''
 
 from ansible.module_utils.basic import AnsibleModule
+import platform
+import json
 
+def ensure_pcs_present(module):
+    rc, out, err = module.run_command('pcs resource status ' + module.params['name'])
+
+    if rc != 0:
+        module.fail_json(msg=out, **result)
+    else:
+        return output
+
+def get_image_digest(module):
+    if module.params['name'].lower() not in ['docker', 'podman'] or module.params['name'] != '':
+        module.fail_json(msg="Invalid container engine.", **result)
+
+    if module.params['name'].lower == 'docker':
+        rc, out, err = module.run_command("docker images --digests")
+    else:
+        rc, image, err = module.run_command("pcs resource config " + module.params['name'] | grep 'image=' | cut -d '=' -f 2)
+        rc, imageInfo, err = module.run_command("podman images " + image + " --format json")
+        imageInfoJSON = json.loads(imageInfo)
+        digest = imageInfoJSON[0]['Digest'].split(':')[1]
+        
 
 def run_module():
     # define available arguments/parameters a user can pass to the module
     module_args = dict(
         name=dict(type='str', required=True),
-        new=dict(type='bool', required=False, default=False)
+        engine=dict(type='str', required=False)
     )
 
     # seed the result dict in the object
@@ -86,8 +104,8 @@ def run_module():
     # for consumption, for example, in a subsequent task
     result = dict(
         changed=False,
-        original_message='',
-        message=''
+    #    original_message='',
+    #    message=''
     )
 
     # the AnsibleModule object will be our abstraction working with Ansible
@@ -105,10 +123,11 @@ def run_module():
     if module.check_mode:
         module.exit_json(**result)
 
-    # manipulate or modify the state as needed (this is going to be the
-    # part where your module will do what it needs to do)
-    result['original_message'] = module.params['name']
-    result['message'] = 'goodbye'
+    resource_status = ensure_pcs_present(module)
+    if platform.node() not in resource_status:
+        response = {"result": "skipping"}
+        module.exit_json(changed=False, meta=response)
+    image_digest = get_image_digest(module)
 
     # use whatever logic you need to determine whether or not this module
     # made any modifications to your target
