@@ -67,7 +67,6 @@ message:
 
 from ansible.module_utils.basic import AnsibleModule
 import platform
-import json
 
 def ensure_pcs_present(module):
     rc, out, err = module.run_command('pcs resource status ' + module.params['name'])
@@ -79,19 +78,17 @@ def ensure_pcs_present(module):
 def get_pulled_image_digest(module):
     if module.params['engine'] != None and module.params['engine'].lower() not in ['docker', 'podman']:
         module.fail_json(msg='Invalid container engine.', **result)
-    rc, imageInfo, err = module.run_command('podman images ' + module.params['name'] + ' --format json')
+    rc, imageInfo, err = module.run_command('podman images ' + module.params['name'] + ' --format "{{.Digest}}"')
     if rc != 0:
         module.fail_json(msg=imageInfo, **result)
-    imageInfoJSON = json.loads(imageInfo)
-    digest = imageInfoJSON[0]['Digest'].split(':')[1]
+    digest = imageInfo.split(':')[1]
     return digest
 
 def get_running_image_digest(module):
-    rc, imageInfo, err = module.run_command('podman container inspect ' + module.params['name'])
+    rc, imageInfo, err = module.run_command('podman container inspect ' + module.params['name'] + ' --format "{{.ImageDigest}}"')
     if rc != 0:
         module.fail_json(msg=imageInfo, **result)
-    imageInfoJSON = json.loads(imageInfo)
-    digest = imageInfoJSON[0]['ImageDigest'].split(':')[1]
+    digest = imageInfo.split(':')[1]
     return digest
 
 def action_resource(module, pulledImageResource, runningImageResource):
