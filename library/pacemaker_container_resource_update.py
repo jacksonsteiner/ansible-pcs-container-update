@@ -32,21 +32,22 @@ author:
 '''
 
 EXAMPLES = r'''
-# Pass in a message
-- name: Test with a message
+# Update the pacemaker resource postgres running in a podman container
+- name: Update Postgres
   my_namespace.my_collection.my_test:
-    name: hello world
+    name: postgres
 
-# pass in a message and have changed true
-- name: Test with a message and changed output
+# Update the pacemaker resource nginx running in a podman container
+- name: Update nginx
   my_namespace.my_collection.my_test:
-    name: hello world
-    new: true
+    name: nginx
+    engine: podman
 
-# fail the module
-- name: Test failure of the module
+# Update the pacemaker resource nginx running in a docker container
+- name: Update nginx
   my_namespace.my_collection.my_test:
-    name: fail me
+    name: nginx
+    engine: docker
 '''
 
 RETURN = r'''
