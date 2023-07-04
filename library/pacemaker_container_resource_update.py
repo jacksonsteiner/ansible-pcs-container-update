@@ -1,7 +1,5 @@
 #!/usr/bin/python
 
-# Copyright: (c) 2018, Terry Jones <terry.jones@example.org>
-# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
@@ -68,34 +66,34 @@ message:
 from ansible.module_utils.basic import AnsibleModule
 import platform
 
-def ensure_pcs_present(module):
+def ensure_pcs_present(module, result):
     rc, out, err = module.run_command('pcs resource status ' + module.params['name'])
     if rc != 0:
-        module.fail_json(msg=out, **result)
+        module.fail_json(msg=err, **result)
     else:
         return out
 
-def get_pulled_image_digest(module):
+def get_pulled_image_digest(module, result):
     if module.params['engine'] != None and module.params['engine'].lower() not in ['docker', 'podman']:
         module.fail_json(msg='Invalid container engine.', **result)
     rc, imageInfo, err = module.run_command('podman images ' + module.params['name'] + ' --format "{{.Digest}}"')
     if rc != 0:
-        module.fail_json(msg=imageInfo, **result)
+        module.fail_json(msg=err, **result)
     digest = imageInfo.split(':')[1]
     return digest
 
-def get_running_image_digest(module):
+def get_running_image_digest(module, result):
     rc, imageInfo, err = module.run_command('podman container inspect ' + module.params['name'] + ' --format "{{.ImageDigest}}"')
     if rc != 0:
-        module.fail_json(msg=imageInfo, **result)
+        module.fail_json(msg=err, **result)
     digest = imageInfo.split(':')[1]
     return digest
 
-def action_resource(module, pulledImageResource, runningImageResource):
+def update_resource(module, result, pulledImageResource, runningImageResource):
     if pulledImageResource != runningImageResource:
         rc, out, err = module.run_command('pcs resource restart ' + module.params['name'])
         if rc != 0:
-            module.fail_json(msg=out, **result)
+            module.fail_json(msg=err, **result)
         else:
             return True
     else:
@@ -119,16 +117,16 @@ def run_module():
     if module.check_mode:
         module.exit_json(**result)
 
-    resourceStatus = ensure_pcs_present(module)
+    resourceStatus = ensure_pcs_present(module, result)
     if platform.node() not in resourceStatus:
         response = {'result': 'skipping'}
         module.exit_json(changed=False, meta=response)
-    pulledImageDigest = get_pulled_image_digest(module)
+    pulledImageDigest = get_pulled_image_digest(module, result)
     if pulledImageDigest == '':
         response = {'result': 'skipping'}
         module.exit_json(changed=False, meta=response)
-    runningImageDigest = get_running_image_digest(module)
-    result['changed'] = action_resource(module, pulledImageDigest, runningImageDigest)
+    runningImageDigest = get_running_image_digest(module, result)
+    result['changed'] = update_resource(module, result, pulledImageDigest, runningImageDigest)
     if result['changed']:
         response = {'result': 'success'}
     else:
