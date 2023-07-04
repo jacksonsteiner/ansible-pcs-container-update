@@ -9,9 +9,16 @@ module: pcs_contaniner_update
 
 short_description: Uniform update for pacemaker container resources.
 
-version_added: "0.0.1"
+version_added: "1.0.0"
 
-description: Longer description of pacemaker_container_resource_update
+description:
+    - "Module for updating container resources being managed by pacemaker."
+    - "Finds the node the resources are running on, then compares digests of pulled image and running container image."
+    - "Uses 'pcs' command-line interface to restart the resource if the digests are not equal."
+    - "Advisable to first pull newer images using Podman/Docker modules. This module does not do that for you."
+    - "This module does not provide rolling updates; this is a uniform update, meaning the resource will experience downtime while it restarts with the newer image."
+    - "If the resource has dependenies, such as in a resource group, the dependent resources will be stopped to update the given container resource."
+    - "Requirements: An HA cluster, 'pcs' command-line interface utility, Podman or Docker."
 
 options:
     name:
@@ -22,10 +29,6 @@ options:
         description: Container engine running containers. Can be Docker or Podman. Defaults to Podman.
         required: false
         type: str
-# Specify this value according to your collection
-# in format of namespace.collection.doc_fragment_name
-extends_documentation_fragment:
-    - my_namespace.my_collection.my_doc_fragment_name
 
 author:
     - Jackson Steiner (@jacksonsteiner)
@@ -48,20 +51,6 @@ EXAMPLES = r'''
   my_namespace.my_collection.my_test:
     name: nginx
     engine: docker
-'''
-
-RETURN = r'''
-# These are examples of possible return values, and in general should use other names for return values.
-original_message:
-    description: The original name param that was passed in.
-    type: str
-    returned: always
-    sample: 'hello world'
-message:
-    description: The output message that the test module generates.
-    type: str
-    returned: always
-    sample: 'goodbye'
 '''
 
 from ansible.module_utils.basic import AnsibleModule
