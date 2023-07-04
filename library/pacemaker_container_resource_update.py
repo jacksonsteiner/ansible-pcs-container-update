@@ -77,14 +77,18 @@ def ensure_pcs_present(module, result):
 def get_pulled_image_digest(module, result):
     if module.params['engine'] != None and module.params['engine'].lower() not in ['docker', 'podman']:
         module.fail_json(msg='Invalid container engine.', **result)
-    rc, imageInfo, err = module.run_command('podman images ' + module.params['name'] + ' --format "{{.Digest}}"')
+    if module.params == None:
+        engine = 'podman'
+    else:
+        engine = module.params['engine'].lower()
+    rc, imageInfo, err = module.run_command(engine + ' images ' + module.params['name'] + ' --format "{{.Digest}}"')
     if rc != 0:
         module.fail_json(msg=err, **result)
     digest = imageInfo.split(':')[1]
-    return digest
+    return digest, engine
 
-def get_running_image_digest(module, result):
-    rc, imageInfo, err = module.run_command('podman container inspect ' + module.params['name'] + ' --format "{{.ImageDigest}}"')
+def get_running_image_digest(module, result, engine):
+    rc, imageInfo, err = module.run_command(engine + ' container inspect ' + module.params['name'] + ' --format "{{.ImageDigest}}"')
     if rc != 0:
         module.fail_json(msg=err, **result)
     digest = imageInfo.split(':')[1]
@@ -122,11 +126,11 @@ def run_module():
     if platform.node() not in resourceStatus:
         response = {'result': 'skipping'}
         module.exit_json(changed=False, meta=response)
-    pulledImageDigest = get_pulled_image_digest(module, result)
+    pulledImageDigest, engine = get_pulled_image_digest(module, result)
     if pulledImageDigest == '':
         response = {'result': 'skipping'}
         module.exit_json(changed=False, meta=response)
-    runningImageDigest = get_running_image_digest(module, result)
+    runningImageDigest = get_running_image_digest(module, result, engine)
     result['changed'] = update_resource(module, result, pulledImageDigest, runningImageDigest)
     if result['changed']:
         response = {'result': 'success'}
