@@ -77,7 +77,7 @@ def ensure_pcs_present(module, result):
 def get_pulled_image_digest(module, result):
     if module.params['engine'] != None and module.params['engine'].lower() not in ['docker', 'podman']:
         module.fail_json(msg='Invalid container engine.', **result)
-    if module.params == None:
+    if module.params['engine'] == None:
         engine = 'podman'
     else:
         engine = module.params['engine'].lower()
