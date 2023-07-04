@@ -76,7 +76,6 @@ def ensure_pcs_present(module):
     else:
         return out
 
-
 def get_pulled_image_digest(module):
     if module.params['engine'] != None and module.params['engine'].lower() not in ['docker', 'podman']:
         module.fail_json(msg='Invalid container engine.', **result)
@@ -87,7 +86,6 @@ def get_pulled_image_digest(module):
     digest = imageInfoJSON[0]['Digest'].split(':')[1]
     return digest
 
-
 def get_running_image_digest(module):
     rc, imageInfo, err = module.run_command('podman container inspect ' + module.params['name'])
     if rc != 0:
@@ -96,10 +94,9 @@ def get_running_image_digest(module):
     digest = imageInfoJSON[0]['ImageDigest'].split(':')[1]
     return digest
 
-
 def action_resource(module, pulledImageResource, runningImageResource):
     if pulledImageResource != runningImageResource:
-        rc, out, err = module.run_command('podman container restart ' + module.params['name'])
+        rc, out, err = module.run_command('pcs resource restart ' + module.params['name'])
         if rc != 0:
             module.fail_json(msg=out, **result)
         else:
@@ -107,35 +104,21 @@ def action_resource(module, pulledImageResource, runningImageResource):
     else:
         return False
 
-
 def run_module():
-    # define available arguments/parameters a user can pass to the module
     module_args = dict(
         name=dict(type='str', required=True),
         engine=dict(type='str', required=False)
     )
 
-    # seed the result dict in the object
-    # we primarily care about changed and state
-    # changed is if this module effectively modified the target
-    # state will include any data that you want your module to pass back
-    # for consumption, for example, in a subsequent task
     result = dict(
         changed=False,
     )
 
-    # the AnsibleModule object will be our abstraction working with Ansible
-    # this includes instantiation, a couple of common attr would be the
-    # args/params passed to the execution, as well as if the module
-    # supports check mode
     module = AnsibleModule(
         argument_spec=module_args,
         supports_check_mode=True
     )
 
-    # if the user is working with this module in only check mode we do not
-    # want to make any changes to the environment, just return the current
-    # state with no modifications
     if module.check_mode:
         module.exit_json(**result)
 
@@ -155,10 +138,8 @@ def run_module():
         response = {'result': 'ok'}
     module.exit_json(**result, meta=response)
 
-
 def main():
     run_module()
-
 
 if __name__ == '__main__':
     main()
