@@ -1,1 +1,1 @@
-# pacemaker-container-resource-update
+# pcs-container-update

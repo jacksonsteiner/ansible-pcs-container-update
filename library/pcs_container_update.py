@@ -5,9 +5,9 @@ __metaclass__ = type
 
 DOCUMENTATION = r'''
 ---
-module: pacemaker_contaniner_resource_update
+module: pcs_contaniner_update
 
-short_description: Uniform update for pacemaker container resources
+short_description: Uniform update for pacemaker container resources.
 
 version_added: "0.0.1"
 
