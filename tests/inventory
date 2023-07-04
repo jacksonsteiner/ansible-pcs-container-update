@@ -1,4 +1,1 @@
-[all]
-cranberry3 ansible_host=192.168.50.33
-cranberry2 ansible_host=192.168.50.32
-cranberry1 ansible_host=192.168.50.31
+localhost
