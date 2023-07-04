@@ -1,4 +1,4 @@
 ---
 galaxy_info:
   author: Jackson Steiner
-  description: pacemaker container resource updater
+  description: Uniform update for pacemaker container resources

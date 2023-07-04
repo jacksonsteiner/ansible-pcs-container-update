@@ -37,18 +37,18 @@ author:
 EXAMPLES = r'''
 # Update the pacemaker resource postgres running in a podman container
 - name: Update Postgres
-  my_namespace.my_collection.my_test:
+  pcs_container_update:
     name: postgres
 
 # Update the pacemaker resource nginx running in a podman container
 - name: Update nginx
-  my_namespace.my_collection.my_test:
+  pcs_container_update:
     name: nginx
     engine: podman
 
 # Update the pacemaker resource nginx running in a docker container
 - name: Update nginx
-  my_namespace.my_collection.my_test:
+  pcs_container_update:
     name: nginx
     engine: docker
 '''
